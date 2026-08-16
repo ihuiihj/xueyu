@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>七夕快乐</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 30%, #2d0a4e 60%, #0a0a2e 100%);
+    background-size: 400% 400%;
+    animation: bgShift 20s ease infinite;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+  }
+
+  @keyframes bgShift {
+    0%, 100% { background-position: 0% 50%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+  }
+
+  /* ========== 星星背景 ========== */
+  #stars-canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ========== 场景容器 ========== */
+  #scene {
+    position: relative; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1;
+  }
+
+  /* ========== 阶段1：玉桂狗 + 爱心 ========== */
+  #phase-dogs {
+    position: absolute; width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 1.5s;
+    z-index: 10;
+  }
+  #phase-dogs.active { opacity: 1; }
+
+  .dog-group {
+    position: absolute;
+    display: flex; flex-direction: column; align-items: center;
+    transition: transform 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .dog-group.left  { left: 5%;  top: 50%; transform: translateY(-50%) translateX(0); }
+  .dog-group.right { right: 5%; top: 50%; transform: translateY(-50%) translateX(0); }
+  .dog-group.left.approaching  { transform: translateY(-50%) translateX(calc(50vw - 250px)); }
+  .dog-group.right.approaching { transform: translateY(-50%) translateX(calc(-50vw + 250px)); }
+
+  .dog-svg { width: 200px; height: auto; filter: drop-shadow(0 0 20px rgba(255,255,255,0.3)); }
+
+  .heart-held {
+    position: absolute; top: 110px; z-index: 5;
+    animation: heartBeat 0.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 15px rgba(255,80,120,0.8));
+    transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .heart-held.merging {
+    animation: heartBeatFast 0.3s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255,100,100,1));
+  }
+
+  .heart-label {
+    position: absolute; top: 150px; left: 50%;
+    transform: translate(-50%, -50%);
+    color: white; font-size: 16px; font-weight: bold;
+    text-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,100,150,0.8);
+    white-space: nowrap; pointer-events: none;
+    letter-spacing: 2px;
+    z-index: 6;
+  }
+
+  @keyframes heartBeat {
+    0%, 100% { transform: scale(1); }
+    14% { transform: scale(1.15); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.15); }
+    56% { transform: scale(1); }
+  }
+
+  @keyframes heartBeatFast {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+
+  /* ========== 烟花 Canvas ========== */
+  #fireworks-canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 20;
+  }
+
+  /* ========== 七夕快乐文字 ========== */
+  #qixi-text {
+    position: absolute; z-index: 25;
+    font-size: 72px; font-weight: bold; color: #ff6b9d;
+    text-shadow: 0 0 20px #ff6b9d, 0 0 40px #ff4081, 0 0 80px #ff1493, 0 0 120px #ff1493;
+    opacity: 0; transform: scale(0.3);
+    transition: all 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    letter-spacing: 12px;
+    pointer-events: none;
+  }
+  #qixi-text.show {
+    opacity: 1; transform: scale(1);
+    animation: textGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes textGlow {
+    0%, 100% { text-shadow: 0 0 20px #ff6b9d, 0 0 40px #ff4081, 0 0 80px #ff1493; }
+    50% { text-shadow: 0 0 40px #ff6b9d, 0 0 80px #ff4081, 0 0 120px #ff1493, 0 0 160px #ff69b4; }
+  }
+
+  /* ========== 阶段3：大爱心 ========== */
+  #big-heart-phase {
+    position: absolute; z-index: 15;
+    display: flex; flex-direction: column; align-items: center;
+    opacity: 0; transition: opacity 1.5s;
+    pointer-events: none;
+  }
+  #big-heart-phase.active { opacity: 1; }
+
+  #big-heart-svg {
+    width: 280px; height: auto;
+    animation: bigHeartBeat 1.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 30px rgba(255,50,100,0.9)) drop-shadow(0 0 60px rgba(255,80,120,0.6));
+  }
+
+  @keyframes bigHeartBeat {
+    0%, 100% { transform: scale(1); }
+    10% { transform: scale(1.08); }
+    20% { transform: scale(1); }
+    30% { transform: scale(1.08); }
+    40% { transform: scale(1); }
+  }
+
+  #big-heart-names {
+    position: absolute; top: 30%;
+    font-size: 28px; font-weight: bold; color: white;
+    text-shadow: 0 0 15px rgba(255,255,255,0.9), 0 0 30px rgba(255,150,180,0.8);
+    letter-spacing: 4px;
+    pointer-events: none;
+  }
+
+  #love-message {
+    margin-top: 30px;
+    font-size: 22px; color: #ffd1e0;
+    text-shadow: 0 0 10px rgba(255,150,180,0.7);
+    text-align: center; max-width: 600px;
+    line-height: 1.8; letter-spacing: 2px;
+    pointer-events: none;
+  }
+
+  /* ========== 阶段4：照片轮播 ========== */
+  #photo-phase {
+    position: absolute; z-index: 30;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 1s;
+    pointer-events: none;
+  }
+  #photo-phase.active { opacity: 1; }
+
+  .photo-card {
+    position: absolute;
+    display: flex; align-items: center; gap: 50px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 30px 50px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(255,100,150,0.15);
+    opacity: 0; transform: translateY(40px) scale(0.9);
+    transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    max-width: 90vw;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .photo-card.show {
+    opacity: 1; transform: translateY(0) scale(1);
+  }
+
+  .photo-img {
+    width: 420px; height: 400px; object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 30px rgba(255,150,200,0.3);
+    border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .photo-text {
+    color: #ffe0ec;
+    font-size: 22px;
+    max-width: 500px;
+    max-height: 380px;
+    overflow-y: auto;
+    line-height: 1.8;
+    text-shadow: 0 0 8px rgba(255,150,200,0.5);
+    letter-spacing: 1.5px;
+    word-break: break-word;
+  }
+
+  /* ========== 阶段5：心形雨 ========== */
+  #final-phase {
+    position: absolute; z-index: 35;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 1.5s;
+    pointer-events: none;
+  }
+  #final-phase.active { opacity: 1; }
+
+  #hearts-rain-canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 34;
+  }
+
+  #final-text {
+    font-size: 48px; font-weight: bold;
+    background: linear-gradient(135deg, #ff6b9d, #ff9a9e, #fecfef, #ff6b9d);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShift 3s ease infinite;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(255,100,150,0.6));
+    letter-spacing: 6px;
+    z-index: 36;
+    pointer-events: none;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* ========== 全局过渡 ========== */
+  .fade-out { opacity: 0 !important; transition: opacity 1s; }
+  .hidden { display: none !important; }
+
+  /* ========== 点击开始提示 ========== */
+  #tap-to-start {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6);
+    cursor: pointer;
+    transition: opacity 0.5s;
+  }
+  #tap-to-start.hidden { opacity: 0; pointer-events: none; }
+  #tap-to-start .tap-icon {
+    font-size: 60px; animation: tapBounce 1.2s ease-in-out infinite;
+  }
+  #tap-to-start .tap-text {
+    color: white; font-size: 24px; margin-top: 16px; letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(255,100,150,0.8);
+  }
+  @keyframes tapBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  @media (max-width: 768px) {
+    .dog-svg { width: 120px; }
+    .dog-group.left { left: 2%; }
+    .dog-group.right { right: 2%; }
+    .dog-group.left.approaching  { transform: translateY(-50%) translateX(calc(50vw - 160px)); }
+    .dog-group.right.approaching { transform: translateY(-50%) translateX(calc(-50vw + 160px)); }
+    .heart-held { top: 65px; width: 55px; height: 50px; }
+    .heart-label { top: 90px; font-size: 13px; }
+    #qixi-text { font-size: 40px; letter-spacing: 6px; }
+    #big-heart-svg { width: 180px; }
+    #big-heart-names { font-size: 20px; }
+    #love-message { font-size: 16px; }
+    .photo-card { flex-direction: column; gap: 20px; padding: 20px 25px; }
+    .photo-img { width: 260px; height: 240px; }
+    .photo-text { font-size: 16px; max-width: 260px; }
+    #final-text { font-size: 28px; letter-spacing: 3px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== 点击开始 ==================== -->
+<div id="tap-to-start">
+  <div class="tap-icon">💗</div>
+  <div class="tap-text">点 击 屏 幕 开 始</div>
+</div>
+
+<!-- ==================== 音频 ==================== -->
+<!--
+  歌曲1：从动画开始播放到展示完大爱心（约第0秒~第18秒）
+  将你的歌曲文件放到与 index.html 同目录下，然后修改 src 路径
+  支持格式：mp3, ogg, wav
+  例如：src="audio/song1.mp3"
+-->
+<audio id="song1" src="" preload="auto" loop></audio>
+
+<!--
+  歌曲2：从照片开始出现播放到最后
+  将你的歌曲文件放到与 index.html 同目录下，然后修改 src 路径
+  例如：src="audio/song2.mp3"
+-->
+<audio id="song2" src="" preload="auto" loop></audio>
+
+<!-- ==================== 星星背景 ==================== -->
+<canvas id="stars-canvas"></canvas>
+
+<!-- ==================== 烟花 Canvas ==================== -->
+<canvas id="fireworks-canvas"></canvas>
+
+<!-- ==================== 心形雨 Canvas ==================== -->
+<canvas id="hearts-rain-canvas"></canvas>
+
+<!-- ==================== 主场景 ==================== -->
+<div id="scene">
+
+  <!-- 阶段1：玉桂狗 + 爱心 -->
+  <div id="phase-dogs">
+    <!-- 左侧玉桂狗 -->
+    <div class="dog-group left" id="dog-left">
+      <svg class="dog-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="dogShadow">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#c0c0d0" flood-opacity="0.3"/>
+          </filter>
+        </defs>
+        <!-- 身体 -->
+        <ellipse cx="100" cy="205" rx="50" ry="46" fill="white" stroke="#e0e0e8" stroke-width="1.5" filter="url(#dogShadow)"/>
+        <!-- 左耳 - 长长垂下来 -->
+        <path d="M58,65 C28,65 14,120 18,195 C20,230 42,245 58,222 C62,206 64,140 66,78 Z" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <path d="M55,75 C33,80 20,122 23,185 C25,215 42,232 55,215 C57,202 59,138 63,80 Z" fill="#e8e0f5"/>
+        <!-- 右耳 - 长长垂下来 -->
+        <path d="M142,65 C172,65 186,120 182,195 C180,230 158,245 142,222 C138,206 136,140 134,78 Z" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <path d="M145,75 C167,80 180,122 177,185 C175,215 158,232 145,215 C143,202 141,138 137,80 Z" fill="#e8e0f5"/>
+        <!-- 头部 -->
+        <circle cx="100" cy="118" r="46" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <!-- 眼睛 -->
+        <ellipse cx="82" cy="114" rx="5" ry="7" fill="#5b9bd5"/>
+        <ellipse cx="118" cy="114" rx="5" ry="7" fill="#5b9bd5"/>
+        <circle cx="84" cy="111" r="2.5" fill="white"/>
+        <circle cx="120" cy="111" r="2.5" fill="white"/>
+        <!-- 腮红 -->
+        <ellipse cx="64" cy="126" rx="10" ry="7" fill="#ffb6c1" opacity="0.7"/>
+        <ellipse cx="136" cy="126" rx="10" ry="7" fill="#ffb6c1" opacity="0.7"/>
+        <!-- 嘴巴 - w形 -->
+        <path d="M93,130 Q96,137 100,130 Q104,137 107,130" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- 前爪 -->
+        <ellipse cx="68" cy="200" rx="15" ry="11" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <ellipse cx="132" cy="200" rx="15" ry="11" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <!-- 脚 -->
+        <ellipse cx="78" cy="248" rx="13" ry="9" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <ellipse cx="122" cy="248" rx="13" ry="9" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <!-- 尾巴 -->
+        <circle cx="100" cy="254" r="7" fill="white" stroke="#d8d8e2" stroke-width="1"/>
+      </svg>
+      <!-- 爱心 -->
+      <svg class="heart-held" id="heart-left" viewBox="0 0 100 90" width="90" height="80">
+        <defs>
+          <radialGradient id="heartGradL" cx="40%" cy="30%">
+            <stop offset="0%" stop-color="#ff6b9d"/>
+            <stop offset="100%" stop-color="#ff1744"/>
+          </radialGradient>
+        </defs>
+        <path d="M50,82 C50,82 10,52 10,32 C10,12 30,2 50,18 C70,2 90,12 90,32 C90,52 50,82 50,82 Z" fill="url(#heartGradL)"/>
+      </svg>
+      <div class="heart-label">戴雪雨</div>
+    </div>
+
+    <!-- 右侧玉桂狗 -->
+    <div class="dog-group right" id="dog-right">
+      <svg class="dog-svg" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="transform: scaleX(-1);">
+        <defs>
+          <filter id="dogShadowR">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#c0c0d0" flood-opacity="0.3"/>
+          </filter>
+        </defs>
+        <ellipse cx="100" cy="205" rx="50" ry="46" fill="white" stroke="#e0e0e8" stroke-width="1.5" filter="url(#dogShadowR)"/>
+        <path d="M58,65 C28,65 14,120 18,195 C20,230 42,245 58,222 C62,206 64,140 66,78 Z" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <path d="M55,75 C33,80 20,122 23,185 C25,215 42,232 55,215 C57,202 59,138 63,80 Z" fill="#e8e0f5"/>
+        <path d="M142,65 C172,65 186,120 182,195 C180,230 158,245 142,222 C138,206 136,140 134,78 Z" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <path d="M145,75 C167,80 180,122 177,185 C175,215 158,232 145,215 C143,202 141,138 137,80 Z" fill="#e8e0f5"/>
+        <circle cx="100" cy="118" r="46" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <ellipse cx="82" cy="114" rx="5" ry="7" fill="#5b9bd5"/>
+        <ellipse cx="118" cy="114" rx="5" ry="7" fill="#5b9bd5"/>
+        <circle cx="84" cy="111" r="2.5" fill="white"/>
+        <circle cx="120" cy="111" r="2.5" fill="white"/>
+        <ellipse cx="64" cy="126" rx="10" ry="7" fill="#ffb6c1" opacity="0.7"/>
+        <ellipse cx="136" cy="126" rx="10" ry="7" fill="#ffb6c1" opacity="0.7"/>
+        <path d="M93,130 Q96,137 100,130 Q104,137 107,130" fill="none" stroke="#aaa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <ellipse cx="68" cy="200" rx="15" ry="11" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <ellipse cx="132" cy="200" rx="15" ry="11" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <ellipse cx="78" cy="248" rx="13" ry="9" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <ellipse cx="122" cy="248" rx="13" ry="9" fill="white" stroke="#d8d8e2" stroke-width="1.5"/>
+        <circle cx="100" cy="254" r="7" fill="white" stroke="#d8d8e2" stroke-width="1"/>
+      </svg>
+      <!-- 爱心 -->
+      <svg class="heart-held" id="heart-right" viewBox="0 0 100 90" width="90" height="80">
+        <defs>
+          <radialGradient id="heartGradR" cx="40%" cy="30%">
+            <stop offset="0%" stop-color="#ff6b9d"/>
+            <stop offset="100%" stop-color="#ff1744"/>
+          </radialGradient>
+        </defs>
+        <path d="M50,82 C50,82 10,52 10,32 C10,12 30,2 50,18 C70,2 90,12 90,32 C90,52 50,82 50,82 Z" fill="url(#heartGradR)"/>
+      </svg>
+      <div class="heart-label">陈赟鹏</div>
+    </div>
+  </div>
+
+  <!-- 七夕快乐 -->
+  <div id="qixi-text">七夕快乐</div>
+
+  <!-- 大爱心阶段 -->
+  <div id="big-heart-phase">
+    <svg id="big-heart-svg" viewBox="0 0 200 180" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bigHeartGrad" cx="40%" cy="30%">
+          <stop offset="0%" stop-color="#ff6b9d"/>
+          <stop offset="50%" stop-color="#ff1744"/>
+          <stop offset="100%" stop-color="#b71c1c"/>
+        </radialGradient>
+        <filter id="heartGlow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <path d="M100,165 C100,165 20,105 20,60 C20,20 60,0 100,36 C140,0 180,20 180,60 C180,105 100,165 100,165 Z" fill="url(#bigHeartGrad)" filter="url(#heartGlow)"/>
+    </svg>
+    <div id="big-heart-names">戴雪雨＆陈赟鹏</div>
+    <div id="love-message">
+      <!-- ★★★ 在这里修改你想对她说的话 ★★★ -->
+      遇见你，是我这辈子最美的意外。<br/>
+      愿往后余生，目光所至，都是你。
+    </div>
+  </div>
+
+  <!-- 照片轮播阶段 -->
+  <div id="photo-phase">
+    <div class="photo-card" id="photo-card"></div>
+  </div>
+
+  <!-- 最终阶段 -->
+  <div id="final-phase">
+    <div id="final-text">愿以后的七夕都有你</div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ==================== 图片配置 ====================
+  // ★★★ 在这里修改你的7张照片路径和对应的文字 ★★★
+  // 将图片放在与 index.html 同目录下（或子目录），然后修改 src 路径
+  // 例如：src: 'images/photo1.jpg'
+  const photos = [
+    { src: 'photo1.jpg', text: '你的每一张照片我都有细心保存' },
+    { src: 'photo2.jpg', text: '希望能寄托我们真挚的的感情' },
+    { src: 'photo3.jpg', text: '宝宝你在我心中如此美好' },
+    { src: 'photo4.jpg', text: '希望你能勇敢的做你自己' },
+    { src: 'photo5.jpg', text: '很高兴在这个年纪遇到你' },
+    { src: 'photo6.jpg', text: '希望有任何事都能告诉我信任我' },
+    { src: 'photo7.jpg', text: '你的喜好我都有认真记下' },
+  ];
+
+  // ==================== 音频配置 ====================
+  // ★★★ 修改音频文件路径 ★★★
+  const song1Src = 'song1.mp3'; // 第一首歌：动画开始~大爱心结束（约0~18秒）
+  const song2Src = 'song2.mp3'; // 第二首歌：照片开始~最后
+
+  // ==================== DOM 元素 ====================
+  const phaseDogs     = document.getElementById('phase-dogs');
+  const dogLeft       = document.getElementById('dog-left');
+  const dogRight      = document.getElementById('dog-right');
+  const heartLeft     = document.getElementById('heart-left');
+  const heartRight    = document.getElementById('heart-right');
+  const qixiText      = document.getElementById('qixi-text');
+  const bigHeartPhase = document.getElementById('big-heart-phase');
+  const loveMessage   = document.getElementById('love-message');
+  const photoPhase    = document.getElementById('photo-phase');
+  const photoCard     = document.getElementById('photo-card');
+  const finalPhase    = document.getElementById('final-phase');
+  const finalText     = document.getElementById('final-text');
+
+  const audio1 = document.getElementById('song1');
+  const audio2 = document.getElementById('song2');
+
+  // ==================== Canvas 元素 ====================
+  const starsCanvas    = document.getElementById('stars-canvas');
+  const starsCtx       = starsCanvas.getContext('2d');
+  const fwCanvas       = document.getElementById('fireworks-canvas');
+  const fwCtx          = fwCanvas.getContext('2d');
+  const hrCanvas       = document.getElementById('hearts-rain-canvas');
+  const hrCtx          = hrCanvas.getContext('2d');
+
+  // ==================== Canvas 尺寸适配 ====================
+  function resizeCanvases() {
+    [starsCanvas, fwCanvas, hrCanvas].forEach(c => {
+      c.width = window.innerWidth;
+      c.height = window.innerHeight;
+    });
+  }
+  resizeCanvases();
+  window.addEventListener('resize', resizeCanvases);
+
+  // ==================== 星星背景 ====================
+  const stars = [];
+  for (let i = 0; i < 200; i++) {
+    stars.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: Math.random() * 2 + 0.5,
+      twinkle: Math.random() * Math.PI * 2,
+      speed: Math.random() * 0.02 + 0.005,
+      opacity: Math.random() * 0.6 + 0.4,
+    });
+  }
+  function drawStars() {
+    starsCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+    stars.forEach(s => {
+      s.twinkle += s.speed;
+      const alpha = s.opacity * (0.5 + 0.5 * Math.sin(s.twinkle));
+      starsCtx.beginPath();
+      starsCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      starsCtx.fillStyle = `rgba(255,255,255,${alpha})`;
+      starsCtx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+
+  // ==================== 烟花粒子系统 ====================
+  let fireworksParticles = [];
+  let fireworksActive = false;
+
+  class FireworkParticle {
+    constructor(x, y, color) {
+      this.x = x; this.y = y;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 2;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed;
+      this.color = color;
+      this.life = 1;
+      this.decay = Math.random() * 0.015 + 0.008;
+      this.size = Math.random() * 3 + 1.5;
+      this.gravity = 0.05;
+      this.trail = [];
+    }
+    update() {
+      this.trail.push({ x: this.x, y: this.y, life: this.life });
+      if (this.trail.length > 8) this.trail.shift();
+      this.x += this.vx; this.y += this.vy;
+      this.vy += this.gravity;
+      this.vx *= 0.99;
+      this.life -= this.decay;
+    }
+    draw(ctx) {
+      // 拖尾
+      this.trail.forEach((t, i) => {
+        const alpha = t.life * 0.3 * (i / this.trail.length);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, this.size * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = this.color.replace('1)', `${alpha})`).replace('rgb', 'rgba');
+        ctx.fill();
+      });
+      // 主体
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color.replace('1)', `${this.life})`).replace('rgb', 'rgba');
+      ctx.fill();
+      // 发光
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+      ctx.fillStyle = this.color.replace('1)', `${this.life * 0.3})`).replace('rgb', 'rgba');
+      ctx.fill();
+    }
+  }
+
+  const fwColors = [
+    'rgb(255,107,157,1)', 'rgb(255,64,129,1)', 'rgb(255,171,64,1)',
+    'rgb(255,235,59,1)', 'rgb(100,255,218,1)', 'rgb(147,112,219,1)',
+    'rgb(255,105,180,1)', 'rgb(255,160,122,1)', 'rgb(135,206,250,1)',
+    'rgb(255,20,147,1)', 'rgb(255,215,0,1)', 'rgb(0,255,255,1)',
+  ];
+
+  function spawnFirework(x, y, count) {
+    const color = fwColors[Math.floor(Math.random() * fwColors.length)];
+    for (let i = 0; i < count; i++) {
+      fireworksParticles.push(new FireworkParticle(x, y, color));
+    }
+  }
+
+  function spawnFireworksBurst() {
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    // 多波烟花
+    spawnFirework(cx - 80, cy - 30, 80);
+    spawnFirework(cx + 80, cy - 30, 80);
+    spawnFirework(cx, cy - 60, 60);
+    setTimeout(() => {
+      spawnFirework(cx - 120, cy + 20, 70);
+      spawnFirework(cx + 120, cy + 20, 70);
+      spawnFirework(cx, cy + 50, 50);
+    }, 200);
+    setTimeout(() => {
+      spawnFirework(cx - 60, cy - 80, 60);
+      spawnFirework(cx + 60, cy - 80, 60);
+      spawnFirework(cx, cy, 50);
+    }, 400);
+    setTimeout(() => {
+      spawnFirework(cx - 150, cy - 50, 50);
+      spawnFirework(cx + 150, cy - 50, 50);
+    }, 600);
+    setTimeout(() => {
+      spawnFirework(cx, cy - 100, 40);
+      spawnFirework(cx - 100, cy + 60, 40);
+      spawnFirework(cx + 100, cy + 60, 40);
+    }, 800);
+  }
+
+  function drawFireworks() {
+    if (!fireworksActive && fireworksParticles.length === 0) {
+      fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+      return;
+    }
+    fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+    fireworksParticles = fireworksParticles.filter(p => p.life > 0);
+    fireworksParticles.forEach(p => { p.update(); p.draw(fwCtx); });
+    if (fireworksParticles.length > 0 || fireworksActive) {
+      requestAnimationFrame(() => { drawFireworks(); });
+    }
+  }
+
+  // ==================== 心形雨 ====================
+  let heartsRainParticles = [];
+  let heartsRainActive = false;
+
+  class HeartRain {
+    constructor() {
+      this.reset();
+      this.y = Math.random() * -window.innerHeight;
+    }
+    reset() {
+      this.x = Math.random() * window.innerWidth;
+      this.y = -40;
+      this.size = Math.random() * 25 + 15;
+      this.speed = Math.random() * 1.5 + 0.8;
+      this.wobble = Math.random() * Math.PI * 2;
+      this.wobbleSpeed = Math.random() * 0.02 + 0.01;
+      this.wobbleAmp = Math.random() * 1.5 + 0.5;
+      this.opacity = Math.random() * 0.6 + 0.4;
+      this.hue = Math.random() * 360;
+      this.rotation = Math.random() * 30 - 15;
+    }
+    update() {
+      this.y += this.speed;
+      this.wobble += this.wobbleSpeed;
+      this.x += Math.sin(this.wobble) * this.wobbleAmp;
+      if (this.y > window.innerHeight + 60) { this.reset(); this.y = -40; }
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation * Math.PI / 180);
+      const s = this.size;
+      ctx.beginPath();
+      ctx.moveTo(0, s * 0.3);
+      ctx.bezierCurveTo(-s * 0.5, -s * 0.2, -s * 0.5, -s * 0.5, 0, -s * 0.15);
+      ctx.bezierCurveTo(s * 0.5, -s * 0.5, s * 0.5, -s * 0.2, 0, s * 0.3);
+      ctx.fillStyle = `hsla(${this.hue}, 90%, 65%, ${this.opacity})`;
+      ctx.fill();
+      ctx.shadowColor = `hsla(${this.hue}, 90%, 65%, 0.6)`;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function initHeartsRain() {
+    heartsRainParticles = [];
+    for (let i = 0; i < 80; i++) {
+      heartsRainParticles.push(new HeartRain());
+    }
+  }
+
+  function drawHeartsRain() {
+    if (!heartsRainActive) {
+      hrCtx.clearRect(0, 0, hrCanvas.width, hrCanvas.height);
+      return;
+    }
+    hrCtx.clearRect(0, 0, hrCanvas.width, hrCanvas.height);
+    heartsRainParticles.forEach(h => { h.update(); h.draw(hrCtx); });
+    requestAnimationFrame(() => { drawHeartsRain(); });
+  }
+
+  // ==================== 音频控制 ====================
+  function playSong1() {
+    if (song1Src) {
+      audio1.src = song1Src;
+      audio1.volume = 0.6;
+      audio1.play().catch(() => {});
+    }
+  }
+  function stopSong1() {
+    audio1.pause();
+    audio1.currentTime = 0;
+  }
+  function playSong2() {
+    if (song2Src) {
+      audio2.src = song2Src;
+      audio2.volume = 0.6;
+      audio2.play().catch(() => {});
+    }
+  }
+  function stopSong2() {
+    audio2.pause();
+    audio2.currentTime = 0;
+  }
+
+  // ==================== 爱心合并动画 ====================
+  function mergeHearts() {
+    const hl = heartLeft;
+    const hr = heartRight;
+    const labels = document.querySelectorAll('.heart-label');
+    hl.classList.add('merging');
+    hr.classList.add('merging');
+
+    // 爱心加速跳动后放大消失
+    setTimeout(() => {
+      hl.style.transition = 'all 0.5s ease-out';
+      hr.style.transition = 'all 0.5s ease-out';
+      hl.style.transform = 'scale(1.8)';
+      hr.style.transform = 'scale(1.8)';
+      hl.style.opacity = '0';
+      hr.style.opacity = '0';
+      hl.style.filter = 'drop-shadow(0 0 40px rgba(255,255,200,1))';
+      hr.style.filter = 'drop-shadow(0 0 40px rgba(255,255,200,1))';
+      labels.forEach(l => { l.style.transition = 'opacity 0.5s'; l.style.opacity = '0'; });
+    }, 400);
+  }
+
+  // ==================== 照片轮播 ====================
+  let photoIndex = 0;
+  let photoInterval = null;
+
+  function showPhoto(index) {
+    if (index >= photos.length) {
+      endPhotoPhase();
+      return;
+    }
+    const p = photos[index];
+    if (p.src) {
+      photoCard.innerHTML = `
+        <img class="photo-img" src="${p.src}" alt="照片 ${index + 1}">
+        <div class="photo-text">${p.text}</div>
+      `;
+    } else {
+      photoCard.innerHTML = `
+        <div class="photo-img" style="display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:14px;background:rgba(255,255,255,0.05);">照片 ${index + 1}</div>
+        <div class="photo-text">${p.text}</div>
+      `;
+    }
+
+    requestAnimationFrame(() => {
+      photoCard.classList.add('show');
+    });
+  }
+
+  function startPhotoPhase() {
+    photoPhase.classList.add('active');
+    photoIndex = 0;
+    showPhoto(0);
+    photoInterval = setInterval(() => {
+      photoIndex++;
+      if (photoIndex < photos.length) {
+        photoCard.classList.remove('show');
+        setTimeout(() => {
+          showPhoto(photoIndex);
+        }, 500);
+      } else {
+        // 最后一张照片展示3秒后结束
+        clearInterval(photoInterval);
+        setTimeout(() => {
+          photoCard.classList.remove('show');
+          setTimeout(endPhotoPhase, 600);
+        }, 3000);
+      }
+    }, 8000);
+  }
+
+  function endPhotoPhase() {
+    clearInterval(photoInterval);
+    photoCard.classList.remove('show');
+    setTimeout(() => {
+      photoPhase.classList.remove('active');
+      startFinalPhase();
+    }, 600);
+  }
+
+  // ==================== 最终阶段 ====================
+  function startFinalPhase() {
+    // 隐藏"七夕快乐"文字
+    qixiText.classList.remove('show');
+    finalPhase.classList.add('active');
+    heartsRainActive = true;
+    if (!heartsRainParticles.length) initHeartsRain();
+    drawHeartsRain();
+  }
+
+  // ==================== 主流程 ====================
+  function start() {
+    // 播放歌曲1
+    playSong1();
+
+    // 阶段1：显示玉桂狗
+    phaseDogs.classList.add('active');
+
+    // 2.5秒后开始缓缓靠近（靠近动画持续5秒）
+    setTimeout(() => {
+      dogLeft.classList.add('approaching');
+      dogRight.classList.add('approaching');
+    }, 2500);
+
+    // 7.5秒后爱心合并
+    setTimeout(() => {
+      mergeHearts();
+    }, 7500);
+
+    // 8.5秒后触发烟花 + 文字
+    setTimeout(() => {
+      fireworksActive = true;
+      spawnFireworksBurst();
+      drawFireworks();
+      qixiText.classList.add('show');
+    }, 8500);
+
+    // 10.5秒后开始淡出玉桂狗
+    setTimeout(() => {
+      phaseDogs.classList.add('fade-out');
+      heartLeft.style.opacity = '0';
+      heartRight.style.opacity = '0';
+    }, 10500);
+
+    // 12秒后隐藏玉桂狗，显示大爱心
+    setTimeout(() => {
+      phaseDogs.classList.add('hidden');
+      phaseDogs.classList.remove('active');
+      bigHeartPhase.classList.add('active');
+    }, 12000);
+
+    // 13.5秒后停止烟花
+    setTimeout(() => {
+      fireworksActive = false;
+    }, 13500);
+
+    // 60秒后大爱心消失，进入照片阶段
+    setTimeout(() => {
+      bigHeartPhase.classList.remove('active');
+      stopSong1();
+      playSong2();
+      setTimeout(() => {
+        bigHeartPhase.classList.add('hidden');
+        startPhotoPhase();
+      }, 1000);
+    }, 60000);
+  }
+
+  // ==================== 点击屏幕解锁音频并开始 ====================
+  const tapOverlay = document.getElementById('tap-to-start');
+  let started = false;
+
+  tapOverlay.addEventListener('click', function unlockAudio() {
+    if (started) return;
+    started = true;
+
+    // 隐藏提示层
+    tapOverlay.classList.add('hidden');
+
+    // 启动动画（音乐会在动画流程中自动播放）
+    start();
+  });
+
+  console.log('🎋 七夕快乐！页面已就绪。');
+  console.log('📝 修改照片：在代码中搜索 "photos" 数组');
+  console.log('🎵 修改音频：在代码中搜索 "song1Src" 和 "song2Src"');
+  console.log('💌 修改告白文字：在代码中搜索 "love-message" 的 innerHTML');
+})();
+</script>
+</body>
+</html>
